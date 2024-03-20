@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    container_name: world-local-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DATABASE=world
+      - POSTGRES_PASSWORD=123
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - '5431:5432'
