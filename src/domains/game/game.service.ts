@@ -71,11 +71,11 @@ export class GameService {
 
     
     const mainCategory = guild.channels.cache.find( channel => (
-      channel.type === ChannelType.GuildCategory && channel.name.toLowerCase === 'мировое господство'.toLowerCase
+      channel.type === ChannelType.GuildCategory && channel.name.toLowerCase() === 'мировое господство'.toLowerCase()
     )) as CategoryChannel | undefined
       
     const category = await guild.channels.create({
-      name: 'Мировое господство - LIVE',
+      name: 'Мировое Господство - LIVE',
       type: ChannelType.GuildCategory,
       permissionOverwrites: [{ id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect }],
       position: mainCategory ? mainCategory.position - 1 : undefined
