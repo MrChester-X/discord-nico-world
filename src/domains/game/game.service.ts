@@ -13,6 +13,7 @@ import {
   Guild,
   GuildBasedChannel,
   GuildChannel,
+  GuildChannelCreateOptions,
   GuildMember,
   Message,
   OverwriteType,
@@ -69,14 +70,17 @@ export class GameService {
     const guild = interaction.guild;
 
     // TODO: ебать как надо это убирать
-    const mainCategory = guild.channels.cache.get('1095094553276579872') as CategoryChannel;
-
+    const mainCategory = guild.channels.cache.find( channel => (
+      channel.type === ChannelType.GuildCategory && channel.name === 'Игрулька' 
+    )) as CategoryChannel | undefined
+      
     const category = await guild.channels.create({
-      name: 'Мировое Господство - LIVE',
-      type: ChannelType.GuildCategory,
-      position: mainCategory.position - 1,
+      name: 'Мировое господство - LIVE',
+      type: ChannelType.GuildCategory as const,
       permissionOverwrites: [{ id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect }],
+      position: mainCategory ? mainCategory.position - 1 : undefined
     });
+
     const channelInfo = await category.children.create({ name: 'info' });
 
     const embed = new EmbedBuilder({
