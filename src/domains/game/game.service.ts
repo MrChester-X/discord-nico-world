@@ -69,14 +69,14 @@ export class GameService {
 
     const guild = interaction.guild;
 
-    // TODO: ебать как надо это убирать
+    
     const mainCategory = guild.channels.cache.find( channel => (
-      channel.type === ChannelType.GuildCategory && channel.name === 'Игрулька' 
+      channel.type === ChannelType.GuildCategory && channel.name.toLowerCase === 'мировое господство'.toLowerCase
     )) as CategoryChannel | undefined
       
     const category = await guild.channels.create({
       name: 'Мировое господство - LIVE',
-      type: ChannelType.GuildCategory as const,
+      type: ChannelType.GuildCategory,
       permissionOverwrites: [{ id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect }],
       position: mainCategory ? mainCategory.position - 1 : undefined
     });
