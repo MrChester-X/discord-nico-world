@@ -6,7 +6,7 @@ import { DiscordjsErrorMixin } from 'discord.js';
 export class DiscordExceptionFilter extends BaseExceptionFilter {
   private logger = new Logger(DiscordExceptionFilter.name);
 
-  catch(exception: any, host: ArgumentsHost): void {
+  catch(exception: any, _host: ArgumentsHost): void {
     this.logger.error('Some discord.js error:', exception);
   }
 }

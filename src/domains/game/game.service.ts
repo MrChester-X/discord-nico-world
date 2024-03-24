@@ -10,21 +10,14 @@ import {
   Client,
   CommandInteraction,
   EmbedBuilder,
-  Guild,
-  GuildBasedChannel,
-  GuildChannel,
-  GuildChannelCreateOptions,
   GuildMember,
-  Message,
-  OverwriteType,
   PermissionFlagsBits,
-  TextBasedChannel,
 } from 'discord.js';
 import { GameCreateDto } from './dto/game-create.dto';
 import { Game, GameStatus } from './entities/game.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { GameInfo, GameInfoRaw, GameUniqueInfo } from './game.interfaces';
+import { GameInfo, GameInfoRaw } from './game.interfaces';
 import { GameDeleteDto } from './dto/game-delete.dto';
 import { GAME_JOIN_BUTTON, GAME_LEAVE_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { PlayerService } from '../player/player.service';
@@ -41,9 +34,13 @@ export class GameService {
   @InjectRepository(Game)
   private gameRepository: Repository<Game>;
 
-  constructor(private client: Client, private playerService: PlayerService, private utilsService: UtilsService) {}
+  constructor(
+    private client: Client,
+    private playerService: PlayerService,
+    private utilsService: UtilsService,
+  ) {}
 
-  async findByChannelInfoId(channelInfoId: string, playersRelation: boolean = false) {
+  async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
     return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
   }
 
@@ -69,26 +66,19 @@ export class GameService {
 
     const guild = interaction.guild;
 
-    
-    const mainCategory = guild.channels.cache.find( channel => (
-      channel.type === ChannelType.GuildCategory && channel.name.toLowerCase() === 'мировое господство'.toLowerCase()
-    )) as CategoryChannel | undefined
-      
+    const mainCategory = guild.channels.cache.find(
+      (channel) =>
+        channel.type === ChannelType.GuildCategory && channel.name.toLowerCase() === 'мировое господство'.toLowerCase(),
+    ) as CategoryChannel | undefined;
+
     const category = await guild.channels.create({
       name: 'Мировое Господство - LIVE',
       type: ChannelType.GuildCategory,
       permissionOverwrites: [{ id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect }],
-      position: mainCategory ? mainCategory.position - 1 : undefined
+      position: mainCategory ? mainCategory.position - 1 : undefined,
     });
 
     const channelInfo = await category.children.create({ name: 'info' });
-
-    const embed = new EmbedBuilder({
-      title: 'Мировое Господство | Информация',
-      description: `Тут будет много инфы и кнопка для реги\n\nКоличество игроков в стране: ${gameCreateDto.teamsCount}\nКоличество стран: ${gameCreateDto.teamsCount}`,
-      fields: [{ name: 'Организатор', value: `${interaction.member}` }],
-      color: 0x0000ff,
-    });
 
     let game = new Game();
     game.playersInTeam = gameCreateDto.playersInTeam;
@@ -291,7 +281,7 @@ export class GameService {
       return this.utilsService.replyErrorMessage(interaction, 'Из этой игры больше нельзя выйти');
     }
 
-    let player = await this.playerService.findByGame(game);
+    const player = await this.playerService.findByGame(game);
     if (!player) {
       return this.utilsService.replyErrorMessage(interaction, 'Вы и так не участвуете в этой игре');
     }

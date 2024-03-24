@@ -5,7 +5,7 @@ import { GameInfo, GameInfoRaw } from '../game/game.interfaces';
 import { ChannelType, PermissionFlagsBits, VoiceChannel } from 'discord.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateTeamParams, TeamInfo, TeamInfoRaw, TeamUniqueInfo } from './team.interfaces';
+import { CreateTeamParams, TeamInfo, TeamInfoRaw } from './team.interfaces';
 import { GameService } from '../game/game.service';
 import { DEFAULT_TEAMS } from './team.const';
 
@@ -20,8 +20,6 @@ export class TeamService {
 
   @InjectRepository(Team)
   private teamRepository: Repository<Team>;
-
-  constructor() {}
 
   async findAllByGame(game: Game) {
     return this.teamRepository.find({
