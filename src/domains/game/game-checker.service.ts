@@ -12,7 +12,11 @@ export class GameCheckerService {
   @InjectRepository(Game)
   private gameRepository: Repository<Game>;
 
-  constructor(private client: Client, private gameService: GameService, private teamService: TeamService) {}
+  constructor(
+    private client: Client,
+    private gameService: GameService,
+    private teamService: TeamService,
+  ) {}
 
   @Cron('*/60 * * * * *')
   async checkGames() {

@@ -40,7 +40,11 @@ export class GameService {
   @InjectRepository(Game)
   private gameRepository: Repository<Game>;
 
-  constructor(private client: Client, private playerService: PlayerService, private utilsService: UtilsService) {}
+  constructor(
+    private client: Client,
+    private playerService: PlayerService,
+    private utilsService: UtilsService,
+  ) {}
 
   async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
     return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
