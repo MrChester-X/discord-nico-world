@@ -12,7 +12,11 @@ export class GameCheckerService {
   @InjectRepository(Game)
   private gameRepository: Repository<Game>;
 
-  constructor(private client: Client, private gameService: GameService, private teamService: TeamService) {}
+  constructor(
+    private client: Client,
+    private gameService: GameService,
+    private teamService: TeamService,
+  ) {}
 
   @Cron('*/60 * * * * *')
   async checkGames() {
@@ -36,7 +40,7 @@ export class GameCheckerService {
       }
 
       for (const team of game.teams) {
-        const _teamInfo = await this.teamService.getInfo(gameInfo, team);
+        await this.teamService.getInfo(gameInfo, team);
       }
     }
   }

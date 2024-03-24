@@ -1,7 +1,6 @@
 import { EmbedBuilder } from '@discordjs/builders';
 import { Injectable } from '@nestjs/common';
 import {
-  BaseInteraction,
   BaseMessageOptions,
   ButtonInteraction,
   CommandInteraction,
