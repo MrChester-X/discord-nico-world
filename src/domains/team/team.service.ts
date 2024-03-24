@@ -21,8 +21,6 @@ export class TeamService {
   @InjectRepository(Team)
   private teamRepository: Repository<Team>;
 
-  constructor() {}
-
   async findAllByGame(game: Game) {
     return this.teamRepository.find({
       where: {

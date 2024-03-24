@@ -42,7 +42,7 @@ export class GameService {
 
   constructor(private client: Client, private playerService: PlayerService, private utilsService: UtilsService) {}
 
-  async findByChannelInfoId(channelInfoId: string, playersRelation: boolean = false) {
+  async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
     return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
   }
 
@@ -287,7 +287,7 @@ export class GameService {
       return this.utilsService.replyErrorMessage(interaction, 'Из этой игры больше нельзя выйти');
     }
 
-    let player = await this.playerService.findByGame(game);
+    const player = await this.playerService.findByGame(game);
     if (!player) {
       return this.utilsService.replyErrorMessage(interaction, 'Вы и так не участвуете в этой игре');
     }
