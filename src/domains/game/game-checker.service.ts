@@ -40,7 +40,7 @@ export class GameCheckerService {
       }
 
       for (const team of game.teams) {
-        const _teamInfo = await this.teamService.getInfo(gameInfo, team);
+        await this.teamService.getInfo(gameInfo, team);
       }
     }
   }

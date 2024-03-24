@@ -10,20 +10,14 @@ import {
   Client,
   CommandInteraction,
   EmbedBuilder,
-  Guild,
-  GuildBasedChannel,
-  GuildChannel,
   GuildMember,
-  Message,
-  OverwriteType,
   PermissionFlagsBits,
-  TextBasedChannel,
 } from 'discord.js';
 import { GameCreateDto } from './dto/game-create.dto';
 import { Game, GameStatus } from './entities/game.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { GameInfo, GameInfoRaw, GameUniqueInfo } from './game.interfaces';
+import { GameInfo, GameInfoRaw } from './game.interfaces';
 import { GameDeleteDto } from './dto/game-delete.dto';
 import { GAME_JOIN_BUTTON, GAME_LEAVE_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { PlayerService } from '../player/player.service';
@@ -82,13 +76,6 @@ export class GameService {
       permissionOverwrites: [{ id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect }],
     });
     const channelInfo = await category.children.create({ name: 'info' });
-
-    const embed = new EmbedBuilder({
-      title: 'Мировое Господство | Информация',
-      description: `Тут будет много инфы и кнопка для реги\n\nКоличество игроков в стране: ${gameCreateDto.teamsCount}\nКоличество стран: ${gameCreateDto.teamsCount}`,
-      fields: [{ name: 'Организатор', value: `${interaction.member}` }],
-      color: 0x0000ff,
-    });
 
     let game = new Game();
     game.playersInTeam = gameCreateDto.playersInTeam;
