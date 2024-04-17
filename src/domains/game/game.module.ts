@@ -7,9 +7,10 @@ import { PlayerModule } from '../player/player.module';
 import { UtilsModule } from '../utils/utils.module';
 import { GameCheckerService } from './game-checker.service';
 import { TeamModule } from '../team/team.module';
+import { WhitelistModule } from '../whitelist/whitelist.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Game]), PlayerModule, UtilsModule, forwardRef(() => TeamModule)],
+  imports: [TypeOrmModule.forFeature([Game]), PlayerModule, UtilsModule, forwardRef(() => TeamModule), WhitelistModule],
   providers: [GameService, GameCommands, GameCheckerService],
   exports: [GameService],
 })

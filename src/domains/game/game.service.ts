@@ -23,6 +23,7 @@ import { GAME_JOIN_BUTTON, GAME_LEAVE_BUTTON, GAME_PLAYERS_BUTTON } from './game
 import { PlayerService } from '../player/player.service';
 import { UtilsService } from '../utils/utils.service';
 import { TeamService } from '../team/team.service';
+import { WhitelistService } from '../whitelist/whitelist.service';
 
 @Injectable()
 export class GameService {
@@ -38,6 +39,7 @@ export class GameService {
     private client: Client,
     private playerService: PlayerService,
     private utilsService: UtilsService,
+    private whitelistService: WhitelistService,
   ) {}
 
   async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
@@ -203,18 +205,30 @@ export class GameService {
   }
 
   async deleteInteraction(interaction: CommandInteraction, gameDeleteDto: GameDeleteDto) {
-    if (!interaction.guild || !interaction.channel) {
+    if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
       return;
     }
 
     await interaction.deferReply({ ephemeral: true });
 
-    if (interaction.user.id !== '347799772096102405') {
+    if (!this.whitelistService.hasGuildMember(interaction.member)) {
       // TODO: отписывать в беседу
-      const adminUser = await this.client.users.fetch('347799772096102405');
-      await adminUser.send(
-        `Чел на ${interaction.user.id} (${interaction.user}) попробовал удалить игру (${gameDeleteDto.id || 'no'})`,
-      );
+      const whitelists = await this.whitelistService.getAllMain();
+      for (const whitelist of whitelists) {
+        const whitelistUser = await this.client.users.fetch(whitelist.discordId);
+
+        try {
+          await whitelistUser.send(
+            `Чел на ${interaction.user.id} (${interaction.user}) попробовал удалить игру (${gameDeleteDto.id || 'no'})`,
+          );
+        } catch (error) {
+          this.logger.error(
+            'Не получилось отправить сообщение игроку',
+            error instanceof Error ? error.stack : undefined,
+            error,
+          );
+        }
+      }
 
       return this.utilsService.replyErrorMessage(
         interaction,
