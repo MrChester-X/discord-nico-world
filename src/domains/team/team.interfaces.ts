@@ -17,4 +17,4 @@ export type TeamInfoRaw = Team &
     isFull: boolean;
   };
 
-export type TeamInfo = TeamUniqueInfo & Team;
+export type TeamInfo = TeamUniqueInfo & Team & TeamInfoRaw;
