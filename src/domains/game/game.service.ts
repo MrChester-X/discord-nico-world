@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   ActionRowBuilder,
   BaseMessageOptions,
@@ -41,6 +41,10 @@ export class GameService {
     private utilsService: UtilsService,
     private whitelistService: WhitelistService,
   ) {}
+
+  async findActiveByOptionalUuid(uuid?: string) {
+    return this.gameRepository.findOne({ where: { status: Not(GameStatus.Finished), uuid } });
+  }
 
   async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
     return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
@@ -236,9 +240,7 @@ export class GameService {
       );
     }
 
-    const game = await this.gameRepository.findOne({
-      where: { status: Not(GameStatus.Finished), uuid: gameDeleteDto.id },
-    });
+    const game = await this.findActiveByOptionalUuid(gameDeleteDto.id);
     if (!game) {
       return this.utilsService.replyErrorMessage(interaction, 'Не нашел игры =(');
     }
@@ -259,7 +261,7 @@ export class GameService {
       return this.utilsService.replyErrorMessage(interaction, 'В эту игру больше нельзя вступить');
     }
 
-    let player = await this.playerService.findByGame(game);
+    let player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
     if (player) {
       const leaveButton = new ButtonBuilder({
         customId: GAME_LEAVE_BUTTON,
@@ -295,7 +297,7 @@ export class GameService {
       return this.utilsService.replyErrorMessage(interaction, 'Из этой игры больше нельзя выйти');
     }
 
-    const player = await this.playerService.findByGame(game);
+    const player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
     if (!player) {
       return this.utilsService.replyErrorMessage(interaction, 'Вы и так не участвуете в этой игре');
     }
