@@ -2,9 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Whitelist, WhitelistType } from './entities/whitelist.entitiy';
 import { GuildMember } from 'discord.js';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class WhitelistService {
+    @InjectRepository(Whitelist)
     private whitelistRepository: Repository<Whitelist>;
 
     async getAllMain() {
