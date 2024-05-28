@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { GameCommandGroup } from './game.decorator';
 import { Button, ButtonContext, Context, Options, SlashCommandContext, Subcommand } from 'necord';
-import { GameCreateDto } from './dto/game-create.dto';
 import { GameDeleteDto } from './dto/game-delete.dto';
 import { GAME_JOIN_BUTTON, GAME_LEAVE_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { GameInteractionService } from './game-interaction.service';
@@ -16,8 +15,8 @@ export class GameCommands {
         name: 'create',
         description: 'Создать игру',
     })
-    async create(@Context() [interaction]: SlashCommandContext, @Options() gameCreateDto: GameCreateDto) {
-        return this.gameInteractionService.createInteraction(interaction, gameCreateDto);
+    async create(@Context() [interaction]: SlashCommandContext) {
+        return this.gameInteractionService.createInteraction(interaction);
     }
 
     @Subcommand({

@@ -19,7 +19,6 @@ import { GameInfo, GameInfoRaw } from './game.interfaces';
 import { GAME_JOIN_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { UtilsService } from '../utils/utils.service';
 import { TeamService } from '../team/team.service';
-import { GameCreateDto } from './dto/game-create.dto';
 
 @Injectable()
 export class GameService {
@@ -47,7 +46,7 @@ export class GameService {
         return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
     }
 
-    async create(guild: Guild, member: GuildMember, gameCreateDto: GameCreateDto) {
+    async create(guild: Guild, member: GuildMember) {
         const mainCategory = guild.channels.cache.find(
             (channel) =>
                 channel.type === ChannelType.GuildCategory &&
@@ -67,8 +66,6 @@ export class GameService {
         const channelGame = await category.children.create({ name: 'game' });
 
         let game = new Game();
-        game.playersInTeam = gameCreateDto.playersInTeam;
-        game.teamsCount = gameCreateDto.teamsCount;
         game.guildId = guild.id;
         game.creatorId = member.id;
         game.categoryId = category.id;
@@ -94,7 +91,7 @@ export class GameService {
     getMessageInfo(game: Game): BaseMessageOptions {
         const embed = new EmbedBuilder({
             title: 'Мировое Господство | Информация',
-            description: `Тут будет много инфы и кнопка для реги\n\nКоличество игроков в стране: ${game.playersInTeam}\nКоличество стран: ${game.teamsCount}`,
+            description: `Тут будет много инфы и кнопка для реги`,
             fields: [{ name: 'Организатор', value: `<@${game.creatorId}>` }],
             color: 0x0379ff,
         });
