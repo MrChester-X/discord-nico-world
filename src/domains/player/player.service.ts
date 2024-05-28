@@ -26,7 +26,13 @@ export class PlayerService {
   }
 
   async findByGameAndDiscordId(game: Game, discordId: string) {
-    return this.playerRepository.findOne({ where: { game: { uuid: game.uuid }, discordId } });
+    return this.playerRepository.findOne({
+      relations: {
+        team: true,
+        game: true,
+      },
+      where: { game: { uuid: game.uuid }, discordId },
+    });
   }
 
   async setTeam(player: Player, team: Team) {
