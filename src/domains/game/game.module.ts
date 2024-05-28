@@ -11,8 +11,14 @@ import { WhitelistModule } from '../whitelist/whitelist.module';
 import { GameInteractionService } from './game-interaction.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Game]), PlayerModule, UtilsModule, forwardRef(() => TeamModule), WhitelistModule],
-  providers: [GameService, GameCommands, GameCheckerService, GameInteractionService],
-  exports: [GameService],
+    imports: [
+        TypeOrmModule.forFeature([Game]),
+        PlayerModule,
+        UtilsModule,
+        forwardRef(() => TeamModule),
+        WhitelistModule,
+    ],
+    providers: [GameService, GameCommands, GameCheckerService, GameInteractionService],
+    exports: [GameService],
 })
 export class GameModule {}

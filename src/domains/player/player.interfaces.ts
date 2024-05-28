@@ -2,7 +2,7 @@ import { GuildMember } from 'discord.js';
 import { Player } from './entities/player.entity';
 
 export interface PlayerUniqueInfo {
-  member: GuildMember;
+    member: GuildMember;
 }
 
 export type PlayerInfoRaw = Player & Partial<PlayerUniqueInfo> & { isFull: boolean };

@@ -6,6 +6,6 @@ import { DomainsModule } from './domains/domains.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [ConfigModule.forRoot(), ScheduleModule.forRoot(), DatabaseModule, DiscordCustomModule, DomainsModule],
+    imports: [ConfigModule.forRoot(), ScheduleModule.forRoot(), DatabaseModule, DiscordCustomModule, DomainsModule],
 })
 export class AppModule {}

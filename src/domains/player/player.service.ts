@@ -10,75 +10,75 @@ import { Team } from '../team/entities/team.entity';
 
 @Injectable()
 export class PlayerService {
-  private logger = new Logger(PlayerService.name);
+    private logger = new Logger(PlayerService.name);
 
-  @InjectRepository(Player)
-  private playerRepository: Repository<Player>;
+    @InjectRepository(Player)
+    private playerRepository: Repository<Player>;
 
-  async create(member: GuildMember, game: Game) {
-    let player = new Player();
-    player.discordId = member.id;
-    player.game = game;
+    async create(member: GuildMember, game: Game) {
+        let player = new Player();
+        player.discordId = member.id;
+        player.game = game;
 
-    player = await this.playerRepository.save(player);
+        player = await this.playerRepository.save(player);
 
-    return player;
-  }
-
-  async findByGameAndDiscordId(game: Game, discordId: string) {
-    return this.playerRepository.findOne({
-      relations: {
-        team: true,
-        game: true,
-      },
-      where: { game: { uuid: game.uuid }, discordId },
-    });
-  }
-
-  async setTeam(player: Player, team: Team) {
-    player.team = team;
-
-    await this.playerRepository.save(player);
-  }
-
-  async getInfoRaw(gameInfoRaw: GameInfoRaw, player: Player) {
-    const playerInfoRaw: PlayerInfoRaw = {
-      isFull: true,
-      ...player,
-    };
-
-    const guild = gameInfoRaw.guild;
-    if (!guild) {
-      playerInfoRaw.isFull = false;
-      return playerInfoRaw;
+        return player;
     }
 
-    // TODO: вроде может выдать ошибку
-    const member = await guild.members.fetch(playerInfoRaw.discordId);
-    if (member) {
-      playerInfoRaw.member = member;
-    } else {
-      playerInfoRaw.isFull = false;
-      this.logger.warn(`${gameInfoRaw.uuid} player ${player.uuid}: не нашел member`);
+    async findByGameAndDiscordId(game: Game, discordId: string) {
+        return this.playerRepository.findOne({
+            relations: {
+                team: true,
+                game: true,
+            },
+            where: { game: { uuid: game.uuid }, discordId },
+        });
     }
 
-    return playerInfoRaw;
-  }
+    async setTeam(player: Player, team: Team) {
+        player.team = team;
 
-  async delete(player: Player) {
-    // TODO: придумать, как рольки удалять, если есть
-
-    await this.playerRepository.softRemove(player);
-  }
-
-  async getInfo(gameInfoRaw: GameInfoRaw, player: Player) {
-    const playerInfoRaw = await this.getInfoRaw(gameInfoRaw, player);
-    if (!playerInfoRaw.isFull) {
-      await this.delete(playerInfoRaw);
-
-      return undefined;
+        await this.playerRepository.save(player);
     }
 
-    return playerInfoRaw as PlayerInfo;
-  }
+    async getInfoRaw(gameInfoRaw: GameInfoRaw, player: Player) {
+        const playerInfoRaw: PlayerInfoRaw = {
+            isFull: true,
+            ...player,
+        };
+
+        const guild = gameInfoRaw.guild;
+        if (!guild) {
+            playerInfoRaw.isFull = false;
+            return playerInfoRaw;
+        }
+
+        // TODO: вроде может выдать ошибку
+        const member = await guild.members.fetch(playerInfoRaw.discordId);
+        if (member) {
+            playerInfoRaw.member = member;
+        } else {
+            playerInfoRaw.isFull = false;
+            this.logger.warn(`${gameInfoRaw.uuid} player ${player.uuid}: не нашел member`);
+        }
+
+        return playerInfoRaw;
+    }
+
+    async delete(player: Player) {
+        // TODO: придумать, как рольки удалять, если есть
+
+        await this.playerRepository.softRemove(player);
+    }
+
+    async getInfo(gameInfoRaw: GameInfoRaw, player: Player) {
+        const playerInfoRaw = await this.getInfoRaw(gameInfoRaw, player);
+        if (!playerInfoRaw.isFull) {
+            await this.delete(playerInfoRaw);
+
+            return undefined;
+        }
+
+        return playerInfoRaw as PlayerInfo;
+    }
 }

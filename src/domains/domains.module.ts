@@ -5,6 +5,6 @@ import { UtilsModule } from './utils/utils.module';
 import { TeamModule } from './team/team.module';
 
 @Module({
-  imports: [GameModule, PlayerModule, UtilsModule, TeamModule],
+    imports: [GameModule, PlayerModule, UtilsModule, TeamModule],
 })
 export class DomainsModule {}
