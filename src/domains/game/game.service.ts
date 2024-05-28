@@ -5,8 +5,12 @@ import {
     ButtonBuilder,
     ButtonStyle,
     CategoryChannel,
+    ChannelType,
     Client,
     EmbedBuilder,
+    Guild,
+    GuildMember,
+    PermissionFlagsBits,
 } from 'discord.js';
 import { Game, GameStatus } from './entities/game.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -15,6 +19,7 @@ import { GameInfo, GameInfoRaw } from './game.interfaces';
 import { GAME_JOIN_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { UtilsService } from '../utils/utils.service';
 import { TeamService } from '../team/team.service';
+import { GameCreateDto } from './dto/game-create.dto';
 
 @Injectable()
 export class GameService {
@@ -32,11 +37,58 @@ export class GameService {
     ) {}
 
     async findActiveByOptionalUuid(uuid?: string) {
-        return this.gameRepository.findOne({ where: { status: Not(GameStatus.Finished), uuid } });
+        return this.gameRepository.findOne({
+            relations: { teams: { players: true } },
+            where: { status: Not(GameStatus.Finished), uuid },
+        });
     }
 
     async findByChannelInfoId(channelInfoId: string, playersRelation = false) {
         return this.gameRepository.findOne({ relations: { players: playersRelation }, where: { channelInfoId } });
+    }
+
+    async create(guild: Guild, member: GuildMember, gameCreateDto: GameCreateDto) {
+        const mainCategory = guild.channels.cache.find(
+            (channel) =>
+                channel.type === ChannelType.GuildCategory &&
+                channel.name.toLowerCase() === 'мировое господство'.toLowerCase(),
+        ) as CategoryChannel | undefined;
+
+        const category = await guild.channels.create({
+            name: 'Мировое Господство - LIVE',
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: [
+                { id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect },
+            ],
+            position: mainCategory ? mainCategory.position - 1 : undefined,
+        });
+
+        const channelInfo = await category.children.create({ name: 'info' });
+        const channelGame = await category.children.create({ name: 'game' });
+
+        let game = new Game();
+        game.playersInTeam = gameCreateDto.playersInTeam;
+        game.teamsCount = gameCreateDto.teamsCount;
+        game.guildId = guild.id;
+        game.creatorId = member.id;
+        game.categoryId = category.id;
+        game.channelInfoId = channelInfo.id;
+        game.channelGameId = channelGame.id;
+
+        const messageInfoOptions = this.getMessageInfo(game);
+        const messageInfo = await channelInfo.send(messageInfoOptions);
+
+        game.messageInfoId = messageInfo.id;
+        game = await this.gameRepository.save(game);
+
+        const gameInfo = await this.getInfo(game);
+        if (!gameInfo) {
+            throw new Error('Не удалось получить все данные по игре');
+        }
+
+        await this.teamService.createDefault(gameInfo);
+
+        return game;
     }
 
     getMessageInfo(game: Game): BaseMessageOptions {
@@ -66,6 +118,21 @@ export class GameService {
             embeds: [embed],
             components: [row],
         };
+    }
+
+    async sendGameInfo(gameInfo: GameInfo): Promise<void> {
+        const teamMessage = gameInfo.teams
+            .map((team, index) => {
+                return `**${index + 1}. ${team.name}**${team.players.length ? team.players.map((player) => `<@${player.discordId}>`).join(' ') : 'Нет игроков =('}`;
+            })
+            .join('\n\n');
+
+        const embed = new EmbedBuilder({
+            title: 'Мировое Господство | Информация',
+            description: `**Раунд: X**\n\n${teamMessage}`,
+        });
+
+        await gameInfo.channelGame.send({ content: '', embeds: [embed] });
     }
 
     async getInfoRaw(game: Game): Promise<GameInfoRaw> {
@@ -99,6 +166,14 @@ export class GameService {
             } else {
                 gameInfoRaw.isFull = false;
                 this.logger.warn(`${game.uuid}: не нашел channelInfo`);
+            }
+
+            const channelGame = guild.channels.cache.get(game.channelGameId);
+            if (channelGame && channelGame.isTextBased()) {
+                gameInfoRaw.channelGame = channelGame;
+            } else {
+                gameInfoRaw.isFull = false;
+                this.logger.warn(`${game.uuid}: не нашел channelGame`);
             }
         } else {
             gameInfoRaw.isFull = false;

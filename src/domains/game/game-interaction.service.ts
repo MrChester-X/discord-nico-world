@@ -1,37 +1,26 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { GameService } from './game.service';
 import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonInteraction,
     ButtonStyle,
-    CategoryChannel,
-    ChannelType,
     Client,
     CommandInteraction,
     EmbedBuilder,
     GuildMember,
-    PermissionFlagsBits,
 } from 'discord.js';
 import { GameCreateDto } from './dto/game-create.dto';
-import { Game, GameStatus } from './entities/game.entity';
+import { GameStatus } from './entities/game.entity';
 import { UtilsService } from '../utils/utils.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { TeamService } from '../team/team.service';
 import { GameDeleteDto } from './dto/game-delete.dto';
 import { WhitelistService } from '../whitelist/whitelist.service';
 import { GAME_LEAVE_BUTTON } from './game.const';
 import { PlayerService } from '../player/player.service';
+import { GameSendInfoDto } from './dto/game-send-info';
 
 @Injectable()
 export class GameInteractionService {
-    @InjectRepository(Game)
-    private gameRepository: Repository<Game>;
-
-    @Inject(forwardRef(() => TeamService))
-    private teamService: TeamService;
-
     private logger = new Logger(GameInteractionService.name);
 
     constructor(
@@ -43,7 +32,7 @@ export class GameInteractionService {
     ) {}
 
     async createInteraction(interaction: CommandInteraction, gameCreateDto: GameCreateDto) {
-        if (!interaction.guild || !interaction.channel) {
+        if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
             return;
         }
 
@@ -62,45 +51,7 @@ export class GameInteractionService {
             );
         }
 
-        const guild = interaction.guild;
-
-        const mainCategory = guild.channels.cache.find(
-            (channel) =>
-                channel.type === ChannelType.GuildCategory &&
-                channel.name.toLowerCase() === 'мировое господство'.toLowerCase(),
-        ) as CategoryChannel | undefined;
-
-        const category = await guild.channels.create({
-            name: 'Мировое Господство - LIVE',
-            type: ChannelType.GuildCategory,
-            permissionOverwrites: [
-                { id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect },
-            ],
-            position: mainCategory ? mainCategory.position - 1 : undefined,
-        });
-
-        const channelInfo = await category.children.create({ name: 'info' });
-
-        let game = new Game();
-        game.playersInTeam = gameCreateDto.playersInTeam;
-        game.teamsCount = gameCreateDto.teamsCount;
-        game.guildId = guild.id;
-        game.creatorId = interaction.user.id;
-        game.categoryId = category.id;
-        game.channelInfoId = channelInfo.id;
-
-        const messageInfoOptions = this.gameService.getMessageInfo(game);
-        const messageInfo = await channelInfo.send(messageInfoOptions);
-
-        game.messageInfoId = messageInfo.id;
-        game = await this.gameRepository.save(game);
-
-        const gameInfo = await this.gameService.getInfo(game);
-        if (!gameInfo) {
-            return;
-        }
-
-        await this.teamService.createDefault(gameInfo);
+        const game = await this.gameService.create(interaction.guild, interaction.member, gameCreateDto);
 
         await this.utilsService.replySuccessMessage(interaction, `Игра создана, ID: \`${game.uuid}\``);
     }
@@ -145,6 +96,24 @@ export class GameInteractionService {
 
         await this.gameService.delete(game);
         return this.utilsService.replySuccessMessage(interaction, `Удалил игру с ID: \`${game.uuid}\``);
+    }
+
+    async sendInfo(interaction: CommandInteraction, gameSendInfoDto: GameSendInfoDto) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const game = await this.gameService.findActiveByOptionalUuid(gameSendInfoDto.id);
+        if (!game) {
+            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
+        }
+
+        const gameInfo = await this.gameService.getInfo(game);
+        if (!gameInfo) {
+            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
+        }
+
+        await this.gameService.sendGameInfo(gameInfo);
+
+        return this.utilsService.replySuccessMessage(interaction, 'Информация отправлена');
     }
 
     async joinButtonInteraction(interaction: ButtonInteraction) {

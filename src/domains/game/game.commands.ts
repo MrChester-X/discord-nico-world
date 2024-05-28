@@ -5,6 +5,7 @@ import { GameCreateDto } from './dto/game-create.dto';
 import { GameDeleteDto } from './dto/game-delete.dto';
 import { GAME_JOIN_BUTTON, GAME_LEAVE_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { GameInteractionService } from './game-interaction.service';
+import { GameSendInfoDto } from './dto/game-send-info';
 
 @GameCommandGroup()
 @Injectable()
@@ -25,6 +26,14 @@ export class GameCommands {
     })
     async delete(@Context() [interaction]: SlashCommandContext, @Options() gameDeleteDto: GameDeleteDto) {
         return this.gameInteractionService.deleteInteraction(interaction, gameDeleteDto);
+    }
+
+    @Subcommand({
+        name: 'send_info',
+        description: 'Удалить игру',
+    })
+    async sendInfo(@Context() [interaction]: SlashCommandContext, @Options() gameSendInfoDto: GameSendInfoDto) {
+        return this.gameInteractionService.sendInfo(interaction, gameSendInfoDto);
     }
 
     @Button(GAME_JOIN_BUTTON)
