@@ -5,4 +5,5 @@ module.exports = {
     useTabs: false,
     printWidth: 120,
     semi: true,
+    endOfLine: 'auto',
 };
