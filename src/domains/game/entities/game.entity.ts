@@ -51,6 +51,9 @@ export class Game {
     @Column({ type: 'varchar' })
     messageInfoId: string;
 
+    @Column({ type: 'varchar' })
+    channelGameId: string;
+
     @CreateDateColumn()
     createdAt: Date;
 

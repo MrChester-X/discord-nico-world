@@ -6,6 +6,7 @@ export interface GameUniqueInfo {
     category: CategoryChannel;
     channelInfo: TextBasedChannel;
     messageInfo: Message<true>;
+    channelGame: TextBasedChannel;
 }
 
 export type GameInfoRaw = Game &
