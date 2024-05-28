@@ -14,150 +14,155 @@ type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
 @Injectable()
 export class TeamService {
-  private logger = new Logger(TeamService.name);
+    private logger = new Logger(TeamService.name);
 
-  @InjectRepository(Team)
-  private teamRepository: Repository<Team>;
+    @InjectRepository(Team)
+    private teamRepository: Repository<Team>;
 
-  constructor(private playerService: PlayerService) {}
+    constructor(private playerService: PlayerService) {}
 
-  async findAllByGame(game: Game) {
-    return this.teamRepository.find({
-      where: {
-        game: {
-          uuid: game.uuid,
-        },
-      },
-    });
-  }
-
-  async findByName(game: Game, name: string) {
-    return this.teamRepository.findOne({
-      where: {
-        game: {
-          uuid: game.uuid,
-        },
-        name,
-      },
-    });
-  }
-
-  async create(gameInfo: GameInfo, createTeamParams: CreateTeamParams) {
-    const guild = gameInfo.guild;
-
-    const role = await guild.roles.create({
-      name: createTeamParams.name,
-      color: createTeamParams.color,
-    });
-
-    const voiceChannel = await gameInfo.category.children.create({
-      type: ChannelType.GuildVoice,
-      name: `${createTeamParams.prefix} ${createTeamParams.name}`,
-      permissionOverwrites: [
-        {
-          id: guild.id,
-          deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect | PermissionFlagsBits.SendMessages,
-        },
-        {
-          id: role.id,
-          allow:
-            PermissionFlagsBits.Connect | PermissionFlagsBits.SendMessages | PermissionFlagsBits.ReadMessageHistory,
-        },
-      ],
-    });
-
-    let team = new Team();
-    team.name = createTeamParams.name;
-    team.prefix = createTeamParams.prefix;
-    team.color = createTeamParams.color;
-    team.roleId = role.id;
-    team.game = gameInfo;
-    team.voiceChannelId = voiceChannel.id;
-
-    team = await this.teamRepository.save(team);
-
-    return team;
-  }
-
-  async createDefault(gameInfo: GameInfo) {
-    const promises = DefaultTeams.map(async (gameCreateParams) => await this.create(gameInfo, gameCreateParams));
-    return Promise.all(promises);
-  }
-
-  async setPlayerTeam(gameInfo: GameInfo, playerInfo: PlayerInfo, teamInfo: TeamInfo) {
-    if (playerInfo.team) {
-      const currentTeamInfo = await this.getInfo(gameInfo, playerInfo.team);
-      if (currentTeamInfo) {
-        await playerInfo.member.roles.remove(currentTeamInfo.role);
-      }
+    async findAllByGame(game: Game) {
+        return this.teamRepository.find({
+            where: {
+                game: {
+                    uuid: game.uuid,
+                },
+            },
+        });
     }
 
-    await playerInfo.member.roles.add(teamInfo.role);
-
-    await this.playerService.setTeam(playerInfo, teamInfo);
-  }
-
-  async getInfoRaw(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team) {
-    const teamInfoRaw: TeamInfoRaw = {
-      isFull: true,
-      ...team,
-    };
-
-    const guild = gameInfoRaw.guild;
-    if (!guild) {
-      teamInfoRaw.isFull = false;
-      return teamInfoRaw;
+    async findByName(game: Game, name: string) {
+        return this.teamRepository.findOne({
+            where: {
+                game: {
+                    uuid: game.uuid,
+                },
+                name,
+            },
+        });
     }
 
-    const voiceChannel = guild.channels.cache.get(team.voiceChannelId);
-    if (voiceChannel && voiceChannel instanceof VoiceChannel) {
-      teamInfoRaw.voiceChannel = voiceChannel;
-    } else {
-      teamInfoRaw.isFull = false;
-      this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел voiceChannel`);
+    async create(gameInfo: GameInfo, createTeamParams: CreateTeamParams) {
+        const guild = gameInfo.guild;
+
+        const role = await guild.roles.create({
+            name: createTeamParams.name,
+            color: createTeamParams.color,
+        });
+
+        const voiceChannel = await gameInfo.category.children.create({
+            type: ChannelType.GuildVoice,
+            name: `${createTeamParams.prefix} ${createTeamParams.name}`,
+            permissionOverwrites: [
+                {
+                    id: guild.id,
+                    deny:
+                        PermissionFlagsBits.ViewChannel |
+                        PermissionFlagsBits.Connect |
+                        PermissionFlagsBits.SendMessages,
+                },
+                {
+                    id: role.id,
+                    allow:
+                        PermissionFlagsBits.Connect |
+                        PermissionFlagsBits.SendMessages |
+                        PermissionFlagsBits.ReadMessageHistory,
+                },
+            ],
+        });
+
+        let team = new Team();
+        team.name = createTeamParams.name;
+        team.prefix = createTeamParams.prefix;
+        team.color = createTeamParams.color;
+        team.roleId = role.id;
+        team.game = gameInfo;
+        team.voiceChannelId = voiceChannel.id;
+
+        team = await this.teamRepository.save(team);
+
+        return team;
     }
 
-    const role = guild.roles.cache.get(team.roleId);
-    if (role) {
-      teamInfoRaw.role = role;
-    } else {
-      teamInfoRaw.isFull = false;
-      this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел role`);
+    async createDefault(gameInfo: GameInfo) {
+        const promises = DefaultTeams.map(async (gameCreateParams) => await this.create(gameInfo, gameCreateParams));
+        return Promise.all(promises);
     }
 
-    return teamInfoRaw;
-  }
+    async setPlayerTeam(gameInfo: GameInfo, playerInfo: PlayerInfo, teamInfo: TeamInfo) {
+        if (playerInfo.team) {
+            const currentTeamInfo = await this.getInfo(gameInfo, playerInfo.team);
+            if (currentTeamInfo) {
+                await playerInfo.member.roles.remove(currentTeamInfo.role);
+            }
+        }
 
-  async delete(teamInfoRaw: TeamInfoRaw) {
-    if (teamInfoRaw.voiceChannel) {
-      await teamInfoRaw.voiceChannel.delete();
+        await playerInfo.member.roles.add(teamInfo.role);
+
+        await this.playerService.setTeam(playerInfo, teamInfo);
     }
 
-    if (teamInfoRaw.role) {
-      await teamInfoRaw.role.delete();
+    async getInfoRaw(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team) {
+        const teamInfoRaw: TeamInfoRaw = {
+            isFull: true,
+            ...team,
+        };
+
+        const guild = gameInfoRaw.guild;
+        if (!guild) {
+            teamInfoRaw.isFull = false;
+            return teamInfoRaw;
+        }
+
+        const voiceChannel = guild.channels.cache.get(team.voiceChannelId);
+        if (voiceChannel && voiceChannel instanceof VoiceChannel) {
+            teamInfoRaw.voiceChannel = voiceChannel;
+        } else {
+            teamInfoRaw.isFull = false;
+            this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел voiceChannel`);
+        }
+
+        const role = guild.roles.cache.get(team.roleId);
+        if (role) {
+            teamInfoRaw.role = role;
+        } else {
+            teamInfoRaw.isFull = false;
+            this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел role`);
+        }
+
+        return teamInfoRaw;
     }
 
-    await this.teamRepository.softRemove(teamInfoRaw);
-  }
+    async delete(teamInfoRaw: TeamInfoRaw) {
+        if (teamInfoRaw.voiceChannel) {
+            await teamInfoRaw.voiceChannel.delete();
+        }
 
-  async deleteByGame(gameInfoRaw: GameInfoRaw) {
-    const teams = await this.findAllByGame(gameInfoRaw);
+        if (teamInfoRaw.role) {
+            await teamInfoRaw.role.delete();
+        }
 
-    const promises = teams.map(async (team) => {
-      const teamInfo = await this.getInfoRaw(gameInfoRaw, team);
-      await this.delete(teamInfo);
-    });
-    return Promise.all(promises);
-  }
-
-  async getInfo(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team): Promise<TeamInfo | undefined> {
-    const teamInfoRaw = await this.getInfoRaw(gameInfoRaw, team);
-    if (!teamInfoRaw.isFull) {
-      await this.delete(teamInfoRaw);
-
-      return undefined;
+        await this.teamRepository.softRemove(teamInfoRaw);
     }
 
-    return teamInfoRaw as TeamInfo;
-  }
+    async deleteByGame(gameInfoRaw: GameInfoRaw) {
+        const teams = await this.findAllByGame(gameInfoRaw);
+
+        const promises = teams.map(async (team) => {
+            const teamInfo = await this.getInfoRaw(gameInfoRaw, team);
+            await this.delete(teamInfo);
+        });
+        return Promise.all(promises);
+    }
+
+    async getInfo(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team): Promise<TeamInfo | undefined> {
+        const teamInfoRaw = await this.getInfoRaw(gameInfoRaw, team);
+        if (!teamInfoRaw.isFull) {
+            await this.delete(teamInfoRaw);
+
+            return undefined;
+        }
+
+        return teamInfoRaw as TeamInfo;
+    }
 }

@@ -6,13 +6,13 @@ import { NecordModule } from 'necord';
 import { DiscordExceptionFilter } from './discord.filter';
 
 @Module({
-  imports: [
-    NecordModule.forRootAsync({
-      inject: [DiscordConfig.KEY],
-      imports: [ConfigModule.forFeature(DiscordConfig)],
-      useFactory: (config: ConfigType<typeof DiscordConfig>) => config,
-    }),
-  ],
-  providers: [DiscordService, DiscordExceptionFilter],
+    imports: [
+        NecordModule.forRootAsync({
+            inject: [DiscordConfig.KEY],
+            imports: [ConfigModule.forFeature(DiscordConfig)],
+            useFactory: (config: ConfigType<typeof DiscordConfig>) => config,
+        }),
+    ],
+    providers: [DiscordService, DiscordExceptionFilter],
 })
 export class DiscordCustomModule {}

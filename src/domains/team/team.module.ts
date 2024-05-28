@@ -9,8 +9,8 @@ import { TeamInteractionService } from './team-interaction.service';
 import { PlayerModule } from '../player/player.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Team]), forwardRef(() => GameModule), UtilsModule, PlayerModule],
-  providers: [TeamService, TeamCommands, TeamInteractionService],
-  exports: [TeamService],
+    imports: [TypeOrmModule.forFeature([Team]), forwardRef(() => GameModule), UtilsModule, PlayerModule],
+    providers: [TeamService, TeamCommands, TeamInteractionService],
+    exports: [TeamService],
 })
 export class TeamModule {}

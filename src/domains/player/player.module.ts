@@ -4,8 +4,8 @@ import { Player } from './entities/player.entity';
 import { PlayerService } from './player.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Player])],
-  providers: [PlayerService],
-  exports: [PlayerService],
+    imports: [TypeOrmModule.forFeature([Player])],
+    providers: [PlayerService],
+    exports: [PlayerService],
 })
 export class PlayerModule {}
