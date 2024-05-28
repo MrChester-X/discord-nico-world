@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Game } from '../game/entities/game.entity';
 import { Team } from './entities/team.entity';
 import { GameInfo, GameInfoRaw } from '../game/game.interfaces';
@@ -6,8 +6,9 @@ import { ChannelType, PermissionFlagsBits, VoiceChannel } from 'discord.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateTeamParams, TeamInfo, TeamInfoRaw } from './team.interfaces';
-import { GameService } from '../game/game.service';
-import { DEFAULT_TEAMS } from './team.const';
+import { DefaultTeams } from './team.const';
+import { PlayerInfo } from '../player/player.interfaces';
+import { PlayerService } from '../player/player.service';
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
@@ -15,11 +16,10 @@ type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 export class TeamService {
   private logger = new Logger(TeamService.name);
 
-  @Inject(forwardRef(() => GameService))
-  private gameService: GameService;
-
   @InjectRepository(Team)
   private teamRepository: Repository<Team>;
+
+  constructor(private playerService: PlayerService) {}
 
   async findAllByGame(game: Game) {
     return this.teamRepository.find({
@@ -27,6 +27,17 @@ export class TeamService {
         game: {
           uuid: game.uuid,
         },
+      },
+    });
+  }
+
+  async findByName(game: Game, name: string) {
+    return this.teamRepository.findOne({
+      where: {
+        game: {
+          uuid: game.uuid,
+        },
+        name,
       },
     });
   }
@@ -69,8 +80,21 @@ export class TeamService {
   }
 
   async createDefault(gameInfo: GameInfo) {
-    const promises = DEFAULT_TEAMS.map(async (gameCreateParams) => await this.create(gameInfo, gameCreateParams));
+    const promises = DefaultTeams.map(async (gameCreateParams) => await this.create(gameInfo, gameCreateParams));
     return Promise.all(promises);
+  }
+
+  async setPlayerTeam(gameInfo: GameInfo, playerInfo: PlayerInfo, teamInfo: TeamInfo) {
+    if (playerInfo.team) {
+      const currentTeamInfo = await this.getInfo(gameInfo, playerInfo.team);
+      if (currentTeamInfo) {
+        await playerInfo.member.roles.remove(currentTeamInfo.role);
+      }
+    }
+
+    await playerInfo.member.roles.add(teamInfo.role);
+
+    await this.playerService.setTeam(playerInfo, teamInfo);
   }
 
   async getInfoRaw(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team) {
@@ -81,6 +105,7 @@ export class TeamService {
 
     const guild = gameInfoRaw.guild;
     if (!guild) {
+      teamInfoRaw.isFull = false;
       return teamInfoRaw;
     }
 
@@ -89,7 +114,7 @@ export class TeamService {
       teamInfoRaw.voiceChannel = voiceChannel;
     } else {
       teamInfoRaw.isFull = false;
-      this.logger.warn(`${gameInfoRaw.uuid} ${team.uuid}: не нашел voiceChannel`);
+      this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел voiceChannel`);
     }
 
     const role = guild.roles.cache.get(team.roleId);
@@ -97,7 +122,7 @@ export class TeamService {
       teamInfoRaw.role = role;
     } else {
       teamInfoRaw.isFull = false;
-      this.logger.warn(`${gameInfoRaw.uuid} ${team.uuid}: не нашел role`);
+      this.logger.warn(`${gameInfoRaw.uuid} team ${team.uuid}: не нашел role`);
     }
 
     return teamInfoRaw;
@@ -125,14 +150,14 @@ export class TeamService {
     return Promise.all(promises);
   }
 
-  async getInfo(gameInfo: GameInfo, team: Team): Promise<TeamInfo | undefined> {
-    const teamInfo = await this.getInfoRaw(gameInfo, team);
-    if (!teamInfo.isFull) {
-      await this.gameService.delete(gameInfo);
+  async getInfo(gameInfoRaw: Optional<GameInfoRaw, 'isFull'>, team: Team): Promise<TeamInfo | undefined> {
+    const teamInfoRaw = await this.getInfoRaw(gameInfoRaw, team);
+    if (!teamInfoRaw.isFull) {
+      await this.delete(teamInfoRaw);
 
       return undefined;
     }
 
-    return teamInfo as TeamInfo;
+    return teamInfoRaw as TeamInfo;
   }
 }

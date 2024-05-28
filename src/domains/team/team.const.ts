@@ -1,6 +1,6 @@
 import { CreateTeamParams } from './team.interfaces';
 
-export const DEFAULT_TEAMS: CreateTeamParams[] = [
+export const DefaultTeams: CreateTeamParams[] = [
   {
     name: 'Япония',
     prefix: '🇯🇵',

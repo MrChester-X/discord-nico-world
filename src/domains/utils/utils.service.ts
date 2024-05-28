@@ -14,9 +14,10 @@ import {
 
 @Injectable()
 export class UtilsService {
-  getSuccessMessage(text: string): BaseMessageOptions {
+  getSuccessMessage(title: string, description?: string): BaseMessageOptions {
     const embed = new EmbedBuilder({
-      title: `${text}`,
+      title: `${title}`,
+      description,
       color: 0x00cc66,
     });
 
@@ -27,13 +28,14 @@ export class UtilsService {
     };
   }
 
-  async replySuccessMessage(interaction: CommandInteraction | ButtonInteraction, text: string) {
-    return interaction.editReply(this.getSuccessMessage(text));
+  async replySuccessMessage(interaction: CommandInteraction | ButtonInteraction, title: string, description?: string) {
+    return interaction.editReply(this.getSuccessMessage(title, description));
   }
 
-  getErrorMessage(text: string): BaseMessageOptions {
+  getErrorMessage(title: string, description?: string): BaseMessageOptions {
     const embed = new EmbedBuilder({
-      title: `${text}`,
+      title: `${title}`,
+      description,
       color: 0xff3333,
     });
 
@@ -44,8 +46,8 @@ export class UtilsService {
     };
   }
 
-  async replyErrorMessage(interaction: CommandInteraction | ButtonInteraction, text: string) {
-    return interaction.editReply(this.getErrorMessage(text));
+  async replyErrorMessage(interaction: CommandInteraction | ButtonInteraction, title: string, description?: string) {
+    return interaction.editReply(this.getErrorMessage(title, description));
   }
 
   async fetchSafeMessage(channel: TextBasedChannel, messageId: string): Promise<Message<true> | null> {

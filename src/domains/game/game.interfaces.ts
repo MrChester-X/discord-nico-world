@@ -13,4 +13,4 @@ export type GameInfoRaw = Game &
     isFull: boolean;
   };
 
-export type GameInfo = Game & GameUniqueInfo;
+export type GameInfo = Game & GameUniqueInfo & GameInfoRaw;
