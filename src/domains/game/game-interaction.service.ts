@@ -10,7 +10,6 @@ import {
     EmbedBuilder,
     GuildMember,
 } from 'discord.js';
-import { GameCreateDto } from './dto/game-create.dto';
 import { GameStatus } from './entities/game.entity';
 import { UtilsService } from '../utils/utils.service';
 import { GameDeleteDto } from './dto/game-delete.dto';
@@ -31,27 +30,14 @@ export class GameInteractionService {
         private playerService: PlayerService,
     ) {}
 
-    async createInteraction(interaction: CommandInteraction, gameCreateDto: GameCreateDto) {
+    async createInteraction(interaction: CommandInteraction) {
         if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
             return;
         }
 
         await interaction.deferReply({ ephemeral: true });
 
-        if (gameCreateDto.playersInTeam < 2) {
-            return this.utilsService.replyErrorMessage(
-                interaction,
-                'Блять, просто иди нахуй, ну какого хуя в стране может быть меньше 2 людей, головой думай несчастный нахуй ты',
-            );
-        }
-        if (gameCreateDto.teamsCount < 2) {
-            return this.utilsService.replyErrorMessage(
-                interaction,
-                'Совсем крытый нахуй??? У тебя блять минимум 2 страны должно быть нахуй, иначе какая блять мировая арена образуется, думать вообще планируешь в этой жизни сука??, если ты еще минус написал, то ты вообще еблан последний блять...',
-            );
-        }
-
-        const game = await this.gameService.create(interaction.guild, interaction.member, gameCreateDto);
+        const game = await this.gameService.create(interaction.guild, interaction.member);
 
         await this.utilsService.replySuccessMessage(interaction, `Игра создана, ID: \`${game.uuid}\``);
     }

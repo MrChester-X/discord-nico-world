@@ -30,12 +30,6 @@ export class Game {
     @OneToMany(() => Team, (team) => team.game)
     teams: Team[];
 
-    @Column({ type: 'int' })
-    playersInTeam: number;
-
-    @Column({ type: 'int' })
-    teamsCount: number;
-
     @Column({ type: 'varchar' })
     guildId: string;
 
