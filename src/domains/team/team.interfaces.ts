@@ -5,6 +5,7 @@ export interface CreateTeamParams {
     name: string;
     prefix: string;
     color: number;
+    buildings: string[];
 }
 
 export interface TeamUniqueInfo {

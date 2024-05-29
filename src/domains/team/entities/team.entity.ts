@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Player } from '../../player/entities/player.entity';
 import { Game } from '../../game/entities/game.entity';
+import { Building } from '../../building/entities/building.entity';
 
 @Entity({ name: 'teams' })
 export class Team {
@@ -30,6 +31,9 @@ export class Team {
 
     @OneToMany(() => Player, (player) => player.team)
     players: Player[];
+
+    @OneToMany(() => Building, (building) => building.team, { cascade: true })
+    buildings: Building[];
 
     @Column({ type: 'varchar' })
     roleId: string;

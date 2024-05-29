@@ -9,6 +9,7 @@ import { CreateTeamParams, TeamInfo, TeamInfoRaw } from './team.interfaces';
 import { DefaultTeams } from './team.const';
 import { PlayerInfo } from '../player/player.interfaces';
 import { PlayerService } from '../player/player.service';
+import { Building } from '../building/entities/building.entity';
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
@@ -78,6 +79,13 @@ export class TeamService {
         team.roleId = role.id;
         team.game = gameInfo;
         team.voiceChannelId = voiceChannel.id;
+
+        team.buildings = createTeamParams.buildings.map((buildingName) => {
+            const building = new Building();
+            building.name = buildingName;
+
+            return building;
+        });
 
         team = await this.teamRepository.save(team);
 
