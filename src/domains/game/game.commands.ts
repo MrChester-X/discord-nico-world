@@ -9,44 +9,44 @@ import { GameSendInfoDto } from './dto/game-send-info';
 @GameCommandGroup()
 @Injectable()
 export class GameCommands {
-    constructor(private gameInteractionService: GameInteractionService) {}
+  constructor(private gameInteractionService: GameInteractionService) {}
 
-    @Subcommand({
-        name: 'create',
-        description: 'Создать игру',
-    })
-    async create(@Context() [interaction]: SlashCommandContext) {
-        return this.gameInteractionService.createInteraction(interaction);
-    }
+  @Subcommand({
+    name: 'create',
+    description: 'Создать игру',
+  })
+  async create(@Context() [interaction]: SlashCommandContext) {
+    return this.gameInteractionService.createInteraction(interaction);
+  }
 
-    @Subcommand({
-        name: 'delete',
-        description: 'Удалить игру',
-    })
-    async delete(@Context() [interaction]: SlashCommandContext, @Options() gameDeleteDto: GameDeleteDto) {
-        return this.gameInteractionService.deleteInteraction(interaction, gameDeleteDto);
-    }
+  @Subcommand({
+    name: 'delete',
+    description: 'Удалить игру',
+  })
+  async delete(@Context() [interaction]: SlashCommandContext, @Options() gameDeleteDto: GameDeleteDto) {
+    return this.gameInteractionService.deleteInteraction(interaction, gameDeleteDto);
+  }
 
-    @Subcommand({
-        name: 'send_info',
-        description: 'Удалить игру',
-    })
-    async sendInfo(@Context() [interaction]: SlashCommandContext, @Options() gameSendInfoDto: GameSendInfoDto) {
-        return this.gameInteractionService.sendInfo(interaction, gameSendInfoDto);
-    }
+  @Subcommand({
+    name: 'send_info',
+    description: 'Посмотреть информацию о текущей игре',
+  })
+  async sendInfo(@Context() [interaction]: SlashCommandContext, @Options() _gameSendInfoDto: GameSendInfoDto) {
+    return this.gameInteractionService.sendInfo(interaction, _gameSendInfoDto);
+  }
 
-    @Button(GAME_JOIN_BUTTON)
-    async onJoinButton(@Context() [interaction]: ButtonContext) {
-        return this.gameInteractionService.joinButtonInteraction(interaction);
-    }
+  @Button(GAME_JOIN_BUTTON)
+  async onJoinButton(@Context() [interaction]: ButtonContext) {
+    return this.gameInteractionService.joinButtonInteraction(interaction);
+  }
 
-    @Button(GAME_LEAVE_BUTTON)
-    async onLeaveButton(@Context() [interaction]: ButtonContext) {
-        return this.gameInteractionService.leaveButtonInteraction(interaction);
-    }
+  @Button(GAME_LEAVE_BUTTON)
+  async onLeaveButton(@Context() [interaction]: ButtonContext) {
+    return this.gameInteractionService.leaveButtonInteraction(interaction);
+  }
 
-    @Button(GAME_PLAYERS_BUTTON)
-    async onPlayersButton(@Context() [interaction]: ButtonContext) {
-        return this.gameInteractionService.playersButtonInteraction(interaction);
-    }
+  @Button(GAME_PLAYERS_BUTTON)
+  async onPlayersButton(@Context() [interaction]: ButtonContext) {
+    return this.gameInteractionService.playersButtonInteraction(interaction);
+  }
 }

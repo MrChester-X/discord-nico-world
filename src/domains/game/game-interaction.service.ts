@@ -1,14 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { GameService } from './game.service';
 import {
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonInteraction,
-    ButtonStyle,
-    Client,
-    CommandInteraction,
-    EmbedBuilder,
-    GuildMember,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonInteraction,
+  ButtonStyle,
+  Client,
+  CommandInteraction,
+  EmbedBuilder,
+  GuildMember,
 } from 'discord.js';
 import { GameStatus } from './entities/game.entity';
 import { UtilsService } from '../utils/utils.service';
@@ -17,177 +17,174 @@ import { WhitelistService } from '../whitelist/whitelist.service';
 import { GAME_LEAVE_BUTTON } from './game.const';
 import { PlayerService } from '../player/player.service';
 import { GameSendInfoDto } from './dto/game-send-info';
+import * as fs from 'fs';
 
 @Injectable()
 export class GameInteractionService {
-    private logger = new Logger(GameInteractionService.name);
+  private logger = new Logger(GameInteractionService.name);
 
-    constructor(
-        private client: Client,
-        private gameService: GameService,
-        private utilsService: UtilsService,
-        private whitelistService: WhitelistService,
-        private playerService: PlayerService,
-    ) {}
+  constructor(
+    private client: Client,
+    private gameService: GameService,
+    private utilsService: UtilsService,
+    private whitelistService: WhitelistService,
+    private playerService: PlayerService,
+  ) {}
 
-    async createInteraction(interaction: CommandInteraction) {
-        if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
-            return;
-        }
-
-        await interaction.deferReply({ ephemeral: true });
-
-        const game = await this.gameService.create(interaction.guild, interaction.member);
-
-        await this.utilsService.replySuccessMessage(interaction, `Игра создана, ID: \`${game.uuid}\``);
+  async createInteraction(interaction: CommandInteraction) {
+    if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
+      return;
     }
 
-    async deleteInteraction(interaction: CommandInteraction, gameDeleteDto: GameDeleteDto) {
-        if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
-            return;
-        }
+    await interaction.deferReply({ ephemeral: true });
 
-        await interaction.deferReply({ ephemeral: true });
+    const game = await this.gameService.create(interaction.guild, interaction.member);
 
-        const isInWhitelist = await this.whitelistService.hasGuildMember(interaction.member);
-        if (!isInWhitelist) {
-            // TODO: отписывать в беседу
-            const whitelists = await this.whitelistService.getAllMain();
-            for (const whitelist of whitelists) {
-                const whitelistUser = await this.client.users.fetch(whitelist.discordId);
+    await this.utilsService.replySuccessMessage(interaction, `Игра создана, ID: \`${game.uuid}\``);
+  }
 
-                try {
-                    await whitelistUser.send(
-                        `Чел на ${interaction.user.id} (${interaction.user}) попробовал удалить игру (${gameDeleteDto.id || 'no'})`,
-                    );
-                } catch (error) {
-                    this.logger.error(
-                        'Не получилось отправить сообщение игроку',
-                        error instanceof Error ? error.stack : undefined,
-                        error,
-                    );
-                }
-            }
-
-            return this.utilsService.replyErrorMessage(
-                interaction,
-                'Охуел??? Тебе нахуя игру удалять? я уже передал всему стаффу какой ты еблан блять',
-            );
-        }
-
-        const game = await this.gameService.findActiveByOptionalUuid(gameDeleteDto.id);
-        if (!game) {
-            return this.utilsService.replyErrorMessage(interaction, 'Не нашел игры =(');
-        }
-
-        await this.gameService.delete(game);
-        return this.utilsService.replySuccessMessage(interaction, `Удалил игру с ID: \`${game.uuid}\``);
+  async deleteInteraction(interaction: CommandInteraction, gameDeleteDto: GameDeleteDto) {
+    if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
+      return;
     }
 
-    async sendInfo(interaction: CommandInteraction, gameSendInfoDto: GameSendInfoDto) {
-        await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ ephemeral: true });
 
-        const game = await this.gameService.findActiveByOptionalUuid(gameSendInfoDto.id);
-        if (!game) {
-            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
+    const isInWhitelist = await this.whitelistService.hasGuildMember(interaction.member);
+    if (!isInWhitelist) {
+      // TODO: отписывать в беседу
+      const whitelists = await this.whitelistService.getAllMain();
+      for (const whitelist of whitelists) {
+        const whitelistUser = await this.client.users.fetch(whitelist.discordId);
+
+        try {
+          await whitelistUser.send(
+            `Чел на ${interaction.user.id} (${interaction.user}) попробовал удалить игру (${gameDeleteDto.id || 'no'})`,
+          );
+        } catch (error) {
+          this.logger.error(
+            'Не получилось отправить сообщение игроку',
+            error instanceof Error ? error.stack : undefined,
+            error,
+          );
         }
+      }
 
-        const gameInfo = await this.gameService.getInfo(game);
-        if (!gameInfo) {
-            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
-        }
-
-        await this.gameService.sendGameInfo(gameInfo);
-
-        return this.utilsService.replySuccessMessage(interaction, 'Информация отправлена');
+      return this.utilsService.replyErrorMessage(
+        interaction,
+        'Охуел??? Тебе нахуя игру удалять? я уже передал всему стаффу какой ты еблан блять',
+      );
     }
 
-    async joinButtonInteraction(interaction: ButtonInteraction) {
-        if (!(interaction.member instanceof GuildMember)) {
-            return;
-        }
-
-        await interaction.deferReply({ ephemeral: true });
-
-        const game = await this.gameService.findByChannelInfoId(interaction.channelId);
-        if (!game || game.status !== GameStatus.Preparing) {
-            return this.utilsService.replyErrorMessage(interaction, 'В эту игру больше нельзя вступить');
-        }
-
-        let player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
-        if (player) {
-            const leaveButton = new ButtonBuilder({
-                customId: GAME_LEAVE_BUTTON,
-                label: 'Покинуть игру',
-                style: ButtonStyle.Danger,
-            });
-
-            const row = new ActionRowBuilder<ButtonBuilder>({ components: [leaveButton] });
-
-            const embed = new EmbedBuilder({
-                title: 'Выход из игры',
-                description: 'Вы уже участвуете в этой игре. Нажмите кнопку ниже, если хотите покинуть ее',
-                color: 0xff3300,
-            });
-
-            return interaction.editReply({ content: '', embeds: [embed], components: [row] });
-        }
-
-        player = await this.playerService.create(interaction.member, game);
-
-        await this.utilsService.replySuccessMessage(interaction, 'Вы успешно вступили в игру');
+    const game = await this.gameService.findActiveByOptionalUuid(gameDeleteDto.id);
+    if (!game) {
+      return this.utilsService.replyErrorMessage(interaction, 'Не нашел игры =(');
     }
 
-    async leaveButtonInteraction(interaction: ButtonInteraction) {
-        if (!(interaction.member instanceof GuildMember)) {
-            return;
-        }
+    await this.gameService.delete(game);
+    return this.utilsService.replySuccessMessage(interaction, `Удалил игру с ID: \`${game.uuid}\``);
+  }
 
-        await interaction.deferUpdate();
+  async sendInfo(interaction: CommandInteraction, _gameSendInfoDto: GameSendInfoDto) {
+    const embedData = JSON.parse(fs.readFileSync('./embed.json', 'utf8')).embeds[0];
+    const embed = new EmbedBuilder()
+      .setTitle(embedData.title)
+      .setColor(embedData.color)
+      .setTimestamp(new Date(embedData.timestamp))
+      .setURL(embedData.url)
+      .setAuthor(embedData.author)
+      .addFields(embedData.fields)
+      .setImage(embedData.image.url)
+      .setThumbnail(embedData.thumbnail.url);
+    await interaction.reply({ embeds: [embed] });
+  }
 
-        const game = await this.gameService.findByChannelInfoId(interaction.channelId);
-        if (!game || game.status !== GameStatus.Preparing) {
-            return this.utilsService.replyErrorMessage(interaction, 'Из этой игры больше нельзя выйти');
-        }
-
-        const player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
-        if (!player) {
-            return this.utilsService.replyErrorMessage(interaction, 'Вы и так не участвуете в этой игре');
-        }
-
-        await this.playerService.delete(player);
-
-        await this.utilsService.replySuccessMessage(interaction, 'Вы успешно вышли из игры');
+  async joinButtonInteraction(interaction: ButtonInteraction) {
+    if (!(interaction.member instanceof GuildMember)) {
+      return;
     }
 
-    async playersButtonInteraction(interaction: ButtonInteraction) {
-        if (!(interaction.member instanceof GuildMember)) {
-            return;
-        }
+    await interaction.deferReply({ ephemeral: true });
 
-        await interaction.deferReply({ ephemeral: true });
-
-        const game = await this.gameService.findByChannelInfoId(interaction.channelId, true);
-        if (!game) {
-            return this.utilsService.replyErrorMessage(interaction, 'Этой игры больше не существует =(');
-        }
-
-        let participantsText = game.players.map((player) => `<@${player.discordId}>`).join(', ');
-        if (!game.players.length) {
-            participantsText = 'Еще нет игроков =(';
-        }
-
-        const embed = new EmbedBuilder({
-            title: 'Текущие игроки:',
-            description: `${participantsText}`,
-            footer: {
-                text: `Сейчас игроков: ${game.players.length} чел.`,
-            },
-        });
-
-        return interaction.editReply({
-            content: '',
-            embeds: [embed],
-        });
+    const game = await this.gameService.findByChannelInfoId(interaction.channelId);
+    if (!game || game.status !== GameStatus.Preparing) {
+      return this.utilsService.replyErrorMessage(interaction, 'В эту игру больше нельзя вступить');
     }
+
+    let player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
+    if (player) {
+      const leaveButton = new ButtonBuilder({
+        customId: GAME_LEAVE_BUTTON,
+        label: 'Покинуть игру',
+        style: ButtonStyle.Danger,
+      });
+
+      const row = new ActionRowBuilder<ButtonBuilder>({ components: [leaveButton] });
+
+      const embed = new EmbedBuilder({
+        title: 'Выход из игры',
+        description: 'Вы уже участвуете в этой игре. Нажмите кнопку ниже, если хотите покинуть ее',
+        color: 0xff3300,
+      });
+
+      return interaction.editReply({ content: '', embeds: [embed], components: [row] });
+    }
+
+    player = await this.playerService.create(interaction.member, game);
+
+    await this.utilsService.replySuccessMessage(interaction, 'Вы успешно вступили в игру');
+  }
+
+  async leaveButtonInteraction(interaction: ButtonInteraction) {
+    if (!(interaction.member instanceof GuildMember)) {
+      return;
+    }
+
+    await interaction.deferUpdate();
+
+    const game = await this.gameService.findByChannelInfoId(interaction.channelId);
+    if (!game || game.status !== GameStatus.Preparing) {
+      return this.utilsService.replyErrorMessage(interaction, 'Из этой игры больше нельзя выйти');
+    }
+
+    const player = await this.playerService.findByGameAndDiscordId(game, interaction.member.id);
+    if (!player) {
+      return this.utilsService.replyErrorMessage(interaction, 'Вы и так не участвуете в этой игре');
+    }
+
+    await this.playerService.delete(player);
+
+    await this.utilsService.replySuccessMessage(interaction, 'Вы успешно вышли из игры');
+  }
+
+  async playersButtonInteraction(interaction: ButtonInteraction) {
+    if (!(interaction.member instanceof GuildMember)) {
+      return;
+    }
+
+    await interaction.deferReply({ ephemeral: true });
+
+    const game = await this.gameService.findByChannelInfoId(interaction.channelId, true);
+    if (!game) {
+      return this.utilsService.replyErrorMessage(interaction, 'Этой игры больше не существует =(');
+    }
+
+    let participantsText = game.players.map((player) => `<@${player.discordId}>`).join(', ');
+    if (!game.players.length) {
+      participantsText = 'Еще нет игроков =(';
+    }
+
+    const embed = new EmbedBuilder({
+      title: 'Текущие игроки:',
+      description: `${participantsText}`,
+      footer: {
+        text: `Сейчас игроков: ${game.players.length} чел.`,
+      },
+    });
+
+    return interaction.editReply({
+      content: '',
+      embeds: [embed],
+    });
+  }
 }
