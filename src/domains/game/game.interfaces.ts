@@ -1,12 +1,13 @@
-import { CategoryChannel, Guild, Message, TextBasedChannel } from 'discord.js';
+import { CategoryChannel, Guild, Message, TextChannel, VoiceChannel } from 'discord.js';
 import { Game } from './entities/game.entity';
 
 export interface GameUniqueInfo {
     guild: Guild;
     category: CategoryChannel;
-    channelInfo: TextBasedChannel;
+    channelInfo: TextChannel;
     messageInfo: Message<true>;
-    channelGame: TextBasedChannel;
+    channelGame: TextChannel;
+    mainVoiceChannel: VoiceChannel;
 }
 
 export type GameInfoRaw = Game &

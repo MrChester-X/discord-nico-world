@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { Game } from '../game/entities/game.entity';
 import { Team } from './entities/team.entity';
 import { GameInfo, GameInfoRaw } from '../game/game.interfaces';
@@ -10,6 +10,7 @@ import { DefaultTeams } from './team.const';
 import { PlayerInfo } from '../player/player.interfaces';
 import { PlayerService } from '../player/player.service';
 import { Building } from '../building/entities/building.entity';
+import { GameService } from '../game/game.service';
 
 type Optional<T, K extends keyof T> = Pick<Partial<T>, K> & Omit<T, K>;
 
@@ -19,6 +20,9 @@ export class TeamService {
 
     @InjectRepository(Team)
     private teamRepository: Repository<Team>;
+
+    @Inject(forwardRef(() => GameService))
+    private gameService: GameService;
 
     constructor(private playerService: PlayerService) {}
 
@@ -65,8 +69,8 @@ export class TeamService {
                 {
                     id: role.id,
                     allow:
+                        PermissionFlagsBits.ViewChannel |
                         PermissionFlagsBits.Connect |
-                        PermissionFlagsBits.SendMessages |
                         PermissionFlagsBits.ReadMessageHistory,
                 },
             ],
@@ -89,7 +93,15 @@ export class TeamService {
 
         team = await this.teamRepository.save(team);
 
+        await this.gameService.prepareOverwritesForTeam(gameInfo, team);
+
         return team;
+    }
+
+    async setAccessForVoiceChannel(teamInfo: TeamInfo, access: boolean) {
+        await teamInfo.voiceChannel.permissionOverwrites.edit(teamInfo.roleId, {
+            Connect: access,
+        });
     }
 
     async createDefault(gameInfo: GameInfo) {

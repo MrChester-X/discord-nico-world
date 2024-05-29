@@ -11,6 +11,8 @@ import {
     Guild,
     GuildMember,
     PermissionFlagsBits,
+    TextChannel,
+    VoiceChannel,
 } from 'discord.js';
 import { Game, GameStatus } from './entities/game.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,6 +21,7 @@ import { GameInfo, GameInfoRaw } from './game.interfaces';
 import { GAME_JOIN_BUTTON, GAME_PLAYERS_BUTTON } from './game.const';
 import { UtilsService } from '../utils/utils.service';
 import { TeamService } from '../team/team.service';
+import { Team } from '../team/entities/team.entity';
 
 @Injectable()
 export class GameService {
@@ -57,13 +60,23 @@ export class GameService {
             name: 'Мировое Господство - LIVE',
             type: ChannelType.GuildCategory,
             permissionOverwrites: [
-                { id: guild.id, deny: PermissionFlagsBits.ViewChannel | PermissionFlagsBits.Connect },
+                {
+                    id: guild.id,
+                    deny:
+                        PermissionFlagsBits.ViewChannel |
+                        PermissionFlagsBits.Connect |
+                        PermissionFlagsBits.SendMessages,
+                },
             ],
             position: mainCategory ? mainCategory.position - 1 : undefined,
         });
 
         const channelInfo = await category.children.create({ name: 'info' });
         const channelGame = await category.children.create({ name: 'game' });
+        const mainVoiceChannel = await category.children.create({
+            name: 'Общее собрание',
+            type: ChannelType.GuildVoice,
+        });
 
         let game = new Game();
         game.guildId = guild.id;
@@ -71,6 +84,7 @@ export class GameService {
         game.categoryId = category.id;
         game.channelInfoId = channelInfo.id;
         game.channelGameId = channelGame.id;
+        game.mainVoiceChannelId = mainVoiceChannel.id;
 
         const messageInfoOptions = this.getMessageInfo(game);
         const messageInfo = await channelInfo.send(messageInfoOptions);
@@ -140,6 +154,23 @@ export class GameService {
         await gameInfo.channelGame.send({ content: '', embeds: [embed] });
     }
 
+    async prepareOverwritesForTeam(gameInfo: GameInfo, team: Team) {
+        await gameInfo.channelGame.permissionOverwrites.edit(team.roleId, {
+            ViewChannel: true,
+        });
+
+        await gameInfo.mainVoiceChannel.permissionOverwrites.edit(team.roleId, {
+            ViewChannel: true,
+            Connect: true,
+        });
+    }
+
+    async setAccessForTeam(gameInfo: GameInfo, team: Team, access: boolean) {
+        await gameInfo.mainVoiceChannel.permissionOverwrites.edit(team.roleId, {
+            Connect: access,
+        });
+    }
+
     async getInfoRaw(game: Game): Promise<GameInfoRaw> {
         const gameInfoRaw: GameInfoRaw = { isFull: true, ...game };
 
@@ -158,7 +189,7 @@ export class GameService {
             }
 
             const channelInfo = guild.channels.cache.get(game.channelInfoId);
-            if (channelInfo && channelInfo.isTextBased()) {
+            if (channelInfo && channelInfo instanceof TextChannel) {
                 gameInfoRaw.channelInfo = channelInfo;
 
                 const messageInfo = await this.utilsService.fetchSafeMessage(channelInfo, game.messageInfoId);
@@ -174,11 +205,19 @@ export class GameService {
             }
 
             const channelGame = guild.channels.cache.get(game.channelGameId);
-            if (channelGame && channelGame.isTextBased()) {
+            if (channelGame && channelGame instanceof TextChannel) {
                 gameInfoRaw.channelGame = channelGame;
             } else {
                 gameInfoRaw.isFull = false;
                 this.logger.warn(`${game.uuid}: не нашел channelGame`);
+            }
+
+            const mainVoiceChannel = guild.channels.cache.get(game.mainVoiceChannelId);
+            if (mainVoiceChannel && mainVoiceChannel instanceof VoiceChannel) {
+                gameInfoRaw.mainVoiceChannel = mainVoiceChannel;
+            } else {
+                gameInfoRaw.isFull = false;
+                this.logger.warn(`${game.uuid}: не нашел mainVoiceChannel`);
             }
         } else {
             gameInfoRaw.isFull = false;

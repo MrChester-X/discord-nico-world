@@ -48,6 +48,9 @@ export class Game {
     @Column({ type: 'varchar' })
     channelGameId: string;
 
+    @Column({ type: 'varchar' })
+    mainVoiceChannelId: string;
+
     @CreateDateColumn()
     createdAt: Date;
 

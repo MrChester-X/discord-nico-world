@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { GameService } from './game.service';
 import {
     ActionRowBuilder,
@@ -17,6 +17,8 @@ import { WhitelistService } from '../whitelist/whitelist.service';
 import { GAME_LEAVE_BUTTON } from './game.const';
 import { PlayerService } from '../player/player.service';
 import { GameSendInfoDto } from './dto/game-send-info';
+import { GameTransferDto } from './dto/game-transfer.dto';
+import { TeamService } from '../team/team.service';
 
 @Injectable()
 export class GameInteractionService {
@@ -29,6 +31,9 @@ export class GameInteractionService {
         private whitelistService: WhitelistService,
         private playerService: PlayerService,
     ) {}
+
+    @Inject(forwardRef(() => TeamService))
+    private teamService: TeamService;
 
     async createInteraction(interaction: CommandInteraction) {
         if (!interaction.guild || !interaction.channel || !(interaction.member instanceof GuildMember)) {
@@ -100,6 +105,45 @@ export class GameInteractionService {
         await this.gameService.sendGameInfo(gameInfo);
 
         return this.utilsService.replySuccessMessage(interaction, 'Информация отправлена');
+    }
+
+    async transfer(interaction: CommandInteraction, gameTransferDto: GameTransferDto) {
+        await interaction.deferReply({ ephemeral: true });
+
+        const game = await this.gameService.findActiveByOptionalUuid(gameTransferDto.id);
+        if (!game) {
+            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
+        }
+
+        const gameInfo = await this.gameService.getInfo(game);
+        if (!gameInfo) {
+            return this.utilsService.replyErrorMessage(interaction, 'Игра не найдена');
+        }
+
+        for (const team of gameInfo.teams) {
+            const teamInfo = await this.teamService.getInfo(gameInfo, team);
+            if (!teamInfo) {
+                continue;
+            }
+
+            await this.gameService.setAccessForTeam(gameInfo, team, gameTransferDto.type === 'main');
+            await this.teamService.setAccessForVoiceChannel(teamInfo, gameTransferDto.type === 'team');
+
+            for (const player of team.players) {
+                const playerInfo = await this.playerService.getInfo(gameInfo, player);
+                if (!playerInfo) {
+                    continue;
+                }
+
+                if (playerInfo.member.voice.channel) {
+                    await playerInfo.member.voice.setChannel(
+                        gameTransferDto.type === 'main' ? gameInfo.mainVoiceChannel : teamInfo.voiceChannel,
+                    );
+                }
+            }
+        }
+
+        return this.utilsService.replySuccessMessage(interaction, 'Трансфер успешно выполнен');
     }
 
     async joinButtonInteraction(interaction: ButtonInteraction) {
