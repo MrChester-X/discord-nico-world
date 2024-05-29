@@ -38,7 +38,7 @@ export class GameService {
 
     async findActiveByOptionalUuid(uuid?: string) {
         return this.gameRepository.findOne({
-            relations: { teams: { players: true } },
+            relations: { teams: { players: true, buildings: true } },
             where: { status: Not(GameStatus.Finished), uuid },
         });
     }
@@ -121,15 +121,23 @@ export class GameService {
     }
 
     async sendGameInfo(gameInfo: GameInfo): Promise<void> {
-        const teamMessage = gameInfo.teams
+        const teamText = gameInfo.teams
             .map((team, index) => {
-                return `**${index + 1}. ${team.name}**${team.players.length ? team.players.map((player) => `<@${player.discordId}>`).join(' ') : 'Нет игроков =('}`;
+                const buildingsText = team.buildings
+                    .map((building) => `${building.isAlive ? ':green_square:' : ':red_square:'} ${building.name}`)
+                    .join('\n');
+
+                const playersText = team.players.length
+                    ? team.players.map((player) => `<@${player.discordId}>`).join(' ')
+                    : 'Нет игроков =(';
+
+                return `**${index + 1}. ${team.name}**\n${buildingsText}\n${playersText}`;
             })
             .join('\n\n');
 
         const embed = new EmbedBuilder({
             title: 'Мировое Господство | Информация',
-            description: `**Раунд: X**\n\n${teamMessage}`,
+            description: `**Раунд: X**\n\n${teamText}`,
         });
 
         await gameInfo.channelGame.send({ content: '', embeds: [embed] });
